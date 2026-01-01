@@ -1,0 +1,26 @@
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Build
+main.js
+main.js.map
+*.js.map
+
+# Release/Distribution
+release/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Obsidian
+data.json
+
+# Claude Code
+.claude/

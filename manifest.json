@@ -1,0 +1,10 @@
+{
+	"id": "image-resize-paste",
+	"name": "Image Resize on Paste",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Automatically resizes images to 1920x1080 when pasted into notes to save disk space",
+	"author": "Your Name",
+	"authorUrl": "",
+	"isDesktopOnly": false
+}
