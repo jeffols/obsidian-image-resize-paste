@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Notice, Plugin, TFile, Modal, App } from 'obsidian';
+import { Editor, MarkdownView, Notice, Plugin, TFile, Modal, App, normalizePath } from 'obsidian';
 import { resizeImage, getExtensionForMimeType } from './imageResizer';
 
 // Configuration constants
@@ -74,43 +74,39 @@ export default class ImageResizePastePlugin extends Plugin {
 			const extension = getExtensionForMimeType(imageFile.type);
 			const fileName = `pasted-image-${Date.now()}.${extension}`;
 
-			// Get the appropriate path for the attachment
-			const attachmentPath = await this.app.vault.getAvailablePathForAttachments(
+			// Get the appropriate path for the attachment (respects user's attachment folder settings)
+			const attachmentPath = await this.app.fileManager.getAvailablePathForAttachment(
 				fileName,
-				view.file.path
+				view.file?.path ?? ''
 			);
 
 			// Convert Blob to ArrayBuffer
 			const arrayBuffer = await resizedBlob.arrayBuffer();
 
-			// Write the file to the vault
-			await this.app.vault.adapter.writeBinary(attachmentPath, arrayBuffer);
+			// Create the file in the vault (returns TFile and indexes it properly)
+			const file = await this.app.vault.createBinary(
+				normalizePath(attachmentPath),
+				arrayBuffer
+			);
 
-			// Get the file reference
-			const file = this.app.vault.getAbstractFileByPath(attachmentPath);
+			// Generate markdown embed link
+			const markdownLink = this.app.fileManager.generateMarkdownLink(
+				file,
+				view.file?.path ?? ''
+			);
 
-			if (file) {
-				// Generate markdown link
-				const markdownLink = this.app.fileManager.generateMarkdownLink(
-					file,
-					view.file.path
+			// Insert the link at cursor position
+			editor.replaceSelection(markdownLink);
+
+			// Calculate and show size reduction if applicable
+			if (resizedBlob.size < imageFile.size) {
+				const originalSizeMB = (imageFile.size / 1024 / 1024).toFixed(2);
+				const newSizeMB = (resizedBlob.size / 1024 / 1024).toFixed(2);
+				const savings = ((1 - resizedBlob.size / imageFile.size) * 100).toFixed(0);
+
+				new Notice(
+					`Image resized: ${originalSizeMB}MB → ${newSizeMB}MB (${savings}% smaller)`
 				);
-
-				// Insert the link at cursor position
-				editor.replaceSelection(markdownLink);
-
-				// Calculate and show size reduction if applicable
-				if (resizedBlob.size < imageFile.size) {
-					const originalSizeMB = (imageFile.size / 1024 / 1024).toFixed(2);
-					const newSizeMB = (resizedBlob.size / 1024 / 1024).toFixed(2);
-					const savings = ((1 - resizedBlob.size / imageFile.size) * 100).toFixed(0);
-
-					new Notice(
-						`Image resized: ${originalSizeMB}MB → ${newSizeMB}MB (${savings}% smaller)`
-					);
-				}
-			} else {
-				new Notice('Failed to get file reference after saving image');
 			}
 		} catch (error) {
 			console.error('Error resizing and pasting image:', error);
